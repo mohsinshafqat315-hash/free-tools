@@ -41,6 +41,11 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Handle favicon requests (browsers automatically request this)
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end(); // 204 No Content - standard for missing favicon
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -124,6 +129,27 @@ app.use((req, res, next) => {
     extensions: ['html', 'htm', 'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico']
 }));
 
+// Handle root path - provide API information
+app.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: 'FreeTools API Backend',
+        version: '1.0.0',
+        endpoints: {
+            health: '/api/health',
+            tools: {
+                seo: '/api/tools/seo/*',
+                finance: '/api/tools/finance/*',
+                socialMedia: '/api/tools/social-media/*',
+                student: '/api/tools/student/*',
+                viral: '/api/tools/viral/*'
+            }
+        },
+        documentation: 'This is an API-only backend. Frontend is deployed separately.',
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Handle root and other routes - catch-all middleware
 app.use((req, res) => {
     // Skip API routes (shouldn't reach here, but just in case)
@@ -131,13 +157,12 @@ app.use((req, res) => {
         return res.status(404).json({ error: 'API route not found' });
     }
     
-    // Try to serve index.html from frontend root
-    const indexPath = path.join(frontendPath, 'index.html');
-    if (fs.existsSync(indexPath)) {
-        return res.sendFile(indexPath);
-    }
-    
-    res.status(404).send('Page not found');
+    // For non-API routes, return 404 with helpful message
+    res.status(404).json({ 
+        error: 'Page not found',
+        message: 'This is an API-only backend. Please use /api/* endpoints.',
+        availableEndpoints: '/api/health'
+    });
 });
 
 // Error handling middleware
